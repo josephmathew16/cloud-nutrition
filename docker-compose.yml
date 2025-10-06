@@ -1,0 +1,6 @@
+version: '3'
+services:
+  nutrition:
+    image: narapark7561/diet-analysis   
+    container_name: nutrition_app
+    command: ["python", "analysis/data_analysis.py"]
