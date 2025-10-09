@@ -1,14 +1,22 @@
-# Use a lightweight Python base image
-FROM python:3.9-slim
+# Lean base, faster builds
+FROM python:3.11-slim
 
-# Set working directory inside the container
+# Headless plotting + sane Python defaults for CI
+ENV MPLBACKEND=Agg \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# Work inside /app
 WORKDIR /app
 
-# Copy the entire project to the container
-COPY . /app
+# Install deps first (better layer caching)
+COPY requirements.txt .
+RUN python -m pip install --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt
 
-# Install required Python packages
-RUN pip install pandas matplotlib seaborn
+# Copy only what we need to run the analysis
+COPY analysis/ analysis/
+COPY data/ data/
 
-# Command to run your Python data analysis script
+# Run Task 1 analysis (produces CSV/PNG in analysis/outputs)
 CMD ["python", "analysis/data_analysis.py"]
