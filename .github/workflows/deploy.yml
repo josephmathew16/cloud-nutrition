@@ -1,0 +1,65 @@
+name: Task 4 CI/CD – Build, Test, Simulate
+
+on:
+  push:
+    branches: [ "main", "feat/t4-ci-*", "feat/t4-ci-joseph" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  python-checks:
+    name: Python run (EDA) and artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [ -f "function_app/requirements.txt" ]; then pip install -r function_app/requirements.txt; fi
+
+      - name: Run analysis (headless)
+        run: python analysis/data_analysis.py
+
+      - name: Upload EDA outputs (CSV + PNG)
+        uses: actions/upload-artifact@v4
+        with:
+          name: task1-outputs-python
+          path: |
+            analysis/outputs/*.csv
+            analysis/outputs/*.png
+
+  docker-sim:
+    name: Docker build & simulate run
+    runs-on: ubuntu-latest
+    needs: python-checks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t diet-analysis:ci .
+
+      - name: Run container (simulate deployment)
+        run: |
+          docker run --rm ^
+            -v "${{ github.workspace }}/data:/app/data" ^
+            -v "${{ github.workspace }}/analysis/outputs:/app/analysis/outputs" ^
+            diet-analysis:ci python analysis/data_analysis.py
+        shell: pwsh
+
+      - name: List generated files
+        run: ls -la analysis/outputs
+
+      - name: Upload container-run outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: task1-outputs-docker
+          path: analysis/outputs/*
