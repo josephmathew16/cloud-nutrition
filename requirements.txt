@@ -1,0 +1,8 @@
+# Core Azure dependencies
+azure-functions
+azure-storage-blob
+
+# Data processing and visualization
+pandas
+matplotlib
+seaborn
