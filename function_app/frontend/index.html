@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Cloud Nutrition – API Integration Check</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: system-ui, Arial; padding: 16px; }
+    .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+    .grid { display:grid; grid-template-columns: 1fr; gap: 16px; max-width: 960px; }
+    canvas { max-width: 100%; }
+    code, pre { background:#f6f8fa; padding:8px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <h2>Cloud Nutrition – API Integration</h2>
+
+  <div class="toolbar">
+    <label>Filter diets:</label>
+    <select id="dietSelect" multiple size="4"></select>
+    <button id="refreshBtn">Refresh</button>
+    <span id="meta" style="margin-left:auto;"></span>
+  </div>
+
+  <div class="grid">
+    <canvas id="barChart" height="120"></canvas>
+    <details>
+      <summary>Raw JSON preview</summary>
+      <pre id="jsonBox"></pre>
+    </details>
+  </div>
+
+  <script type="module">
+    // Import helper functions
+    import { getDietInsights } from "./src/api/fetchData.js";
+    import { toChartSeries, filterByDiet } from "./src/utils/transformData.js";
+
+    let chart;
+
+    // Main rendering function
+    async function loadAndRender() {
+      // Fetch data from Azure Function
+      const payload = await getDietInsights(); // { datasetName, fetchedAt, records }
+      const dietNames = [...new Set(payload.records.map(r => r.Diet_type))];
+
+      // Initialize filter options (on first load)
+      const sel = document.getElementById("dietSelect");
+      if (sel.options.length === 0) {
+        dietNames.forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          sel.appendChild(opt);
+        });
+      }
+
+      // Get selected filter values
+      const selected = [...sel.selectedOptions].map(o => o.value);
+      const filtered = filterByDiet(payload.records, selected);
+
+      // Display metadata (dataset name + updated time)
+      document.getElementById("meta").textContent =
+        `Dataset: ${payload.datasetName} • Updated: ${new Date(payload.fetchedAt).toLocaleString()}`;
+
+      // Show JSON data in preview box
+      document.getElementById("jsonBox").textContent = JSON.stringify(filtered, null, 2);
+
+      // Prepare chart data
+      const { labels, protein, carbs, fat } = toChartSeries(filtered);
+
+      // Render chart
+      const ctx = document.getElementById("barChart").getContext("2d");
+      if (chart) chart.destroy(); // Reset previous chart if it exists
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Protein (g)", data: protein },
+            { label: "Carbs (g)",   data: carbs   },
+            { label: "Fat (g)",     data: fat     },
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: "top" },
+            title: { display: true, text: "Avg Macros by Diet Type" }
+          },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    // Event listeners for refresh and filter selection
+    document.getElementById("refreshBtn").addEventListener("click", loadAndRender);
+    document.getElementById("dietSelect").addEventListener("change", loadAndRender);
+
+    // First render
+    loadAndRender().catch(err => {
+      alert("API error. See console.");
+      console.error(err);
+    });
+  </script>
+</body>
+</html>
