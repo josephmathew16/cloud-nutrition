@@ -1,22 +1,29 @@
+// frontend/src/api/fetchData.js
+
+const API_URL =
+  "https://diet-analysis-function-app-grp7-gedbcqgtbzbehybd.westus-01.azurewebsites.net/api/process";
+
 export async function getDietInsights() {
-  const endpoint =
-    'https://diet-analysis-function-app-grp7-gedbcqgtbzbehybd.westus-01.azurewebsites.net/api/process';
+  try {
+    console.log("Calling Azure Function:", API_URL);
 
-  const res = await fetch(endpoint, {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-  });
+    const res = await fetch(API_URL);
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`[API] ${res.status} ${res.statusText} ${text}`);
+    // If the fetch itself failed (CORS/network), this next line might not even run.
+    console.log("Function response status:", res.status);
+
+    const text = await res.text();
+    console.log("Raw response text from Function:", text);
+
+    if (!res.ok) {
+      // This will be caught in index.html and show "Error loading data..."
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+
+    // If everything is OK, parse JSON and return
+    return JSON.parse(text);
+  } catch (err) {
+    console.error("getDietInsights() error:", err);
+    throw err;
   }
-
-  const data = await res.json();
-  return {
-    datasetName: 'All_Diets.csv',
-    fetchedAt: new Date().toISOString(),
-    records: data.result ?? [],
-  };
 }
-
