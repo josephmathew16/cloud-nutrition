@@ -186,7 +186,6 @@
       text-align: center;
       padding: 14px 8px 18px;
       font-size: 0.8rem;
-      color: #6b7280;
       background: #2563eb;
       color: #e5e7eb;
     }
@@ -307,25 +306,31 @@
     // Data loading + filtering
     // ---------------------------
     async function loadData() {
-      const payload = await getDietInsights(); // { datasetName, fetchedAt, records }
-      fullPayload = payload;
+      try {
+        const payload = await getDietInsights(); // { datasetName, fetchedAt, records }
+        fullPayload = payload;
 
-      // Populate dropdown once
-      const dietFilter = document.getElementById("dietFilter");
-      if (dietFilter.options.length === 1) {
-        const uniqueDiets = [...new Set(payload.records.map(r => r.Diet_type))]
-          .filter(Boolean)
-          .sort();
+        // Populate dropdown once
+        const dietFilter = document.getElementById("dietFilter");
+        if (dietFilter.options.length === 1) {
+          const uniqueDiets = [...new Set(payload.records.map(r => r.Diet_type))]
+            .filter(Boolean)
+            .sort();
 
-        uniqueDiets.forEach(d => {
-          const opt = document.createElement("option");
-          opt.value = d;
-          opt.textContent = d;
-          dietFilter.appendChild(opt);
-        });
+          uniqueDiets.forEach(d => {
+            const opt = document.createElement("option");
+            opt.value = d;
+            opt.textContent = d;
+            dietFilter.appendChild(opt);
+          });
+        }
+
+        renderDashboard();
+      } catch (err) {
+        console.error("Error loading data:", err);
+        const metaEl = document.getElementById("meta");
+        metaEl.textContent = "Error loading data from Azure Function.";
       }
-
-      renderDashboard();
     }
 
     function getFilteredRecords() {
