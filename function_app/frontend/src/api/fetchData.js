@@ -19,3 +19,4 @@ export async function getDietInsights() {
     records: data.result ?? [],
   };
 }
+

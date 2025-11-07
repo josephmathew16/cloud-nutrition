@@ -11,3 +11,4 @@ export function filterByDiet(records, include = []) {
   const set = new Set(include);
   return records.filter((r) => set.has(r.Diet_type));
 }
+
